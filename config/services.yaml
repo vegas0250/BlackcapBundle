@@ -1,0 +1,9 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  Vegas0250\BlackcapBundle\:
+    resource: '../src/'
+    exclude:
+      - '../src/BlackcapBundle.php'

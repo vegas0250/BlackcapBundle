@@ -1,0 +1,10 @@
+{
+  "name": "vegas0250/blackcap-bundle",
+  "type": "symfony-bundle",
+  "autoload": {
+    "psr-4": { "Vegas0250\\BlackcapBundle\\": "src/" }
+  },
+  "require": {
+    "php": ">=8.1"
+  }
+}
