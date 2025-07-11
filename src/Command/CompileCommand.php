@@ -3,7 +3,10 @@
 namespace Vegas0250\BlackcapBundle\Command;
 
 use App\Kernel;
+use AppendIterator;
+use ArrayIterator;
 use FilesystemIterator;
+use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
@@ -73,11 +76,12 @@ class CompileCommand extends Command
     # absolutePath = абсолютный путь
 
     public function scan($absolutePath = null) {
-
         if (!is_dir($absolutePath)) {
             echo 'Folder ' . $absolutePath . ' not found'.PHP_EOL;
             exit;
         }
+
+        $rootIterator = new ArrayIterator([new SplFileInfo($absolutePath)]);
 
         $filter = new \RecursiveCallbackFilterIterator(
             new \RecursiveDirectoryIterator(
@@ -94,8 +98,18 @@ class CompileCommand extends Command
             \RecursiveIteratorIterator::SELF_FIRST
         );
 
-        foreach($iterator as $item) {
-            $breadcrumbs = explode(DIRECTORY_SEPARATOR, str_replace($absolutePath.DIRECTORY_SEPARATOR, '', $item->getPathname()));
+        $combined = new AppendIterator();
+        $combined->append($rootIterator);
+        $combined->append($iterator);
+
+        foreach($combined as $item) {
+            $breadcrumbs = explode(DIRECTORY_SEPARATOR, str_replace($this->kernel->getProjectDir().DIRECTORY_SEPARATOR, '', $item->getPathname()));
+
+            dump([
+                $this->kernel->getProjectDir().DIRECTORY_SEPARATOR,
+                $item->getPathname(),
+                $breadcrumbs
+            ]);
 
             $symfonyDirs = array_intersect(scandir($item->getPathname()), self::LIST_SYMFONY_DIRS);
 
@@ -122,34 +136,22 @@ class CompileCommand extends Command
                         $namespace = implode('\\', array_map(function ($item) {
 
                             return implode('\\', array_map(function ($item) {
-
                                 return implode('\\', array_map(function ($item) {
                                     return (new UnicodeString($item))->camel()->title(true)->toString();
                                 }, explode('-', $item)));
-
-                                # return str_replace('-', '\\', $item);
-
                             }, explode(DIRECTORY_SEPARATOR, $item)));
 
-                            #dump([
-                           #     'breadcrumbs' => $breadcrumbs,
-                                # 'unicode breadcrumbs' => (new UnicodeString($breadcrumbs))->camel()->title(true)->toString(),
-                            #]);
+                        }, array_merge($breadcrumbs, [''])));
 
-                            #return (new UnicodeString($breadcrumbs))->camel()->title(true)->toString();
-                        }, array_merge(['Component'], $breadcrumbs, [''])));
+                        $this->tasks[self::TASK_EXPAND_PSR4][$namespace] = implode('/', [implode('/', $breadcrumbs), 'src', '']);
 
-                        #dump($namespace);
-
-                        $this->tasks[self::TASK_EXPAND_PSR4][$namespace] = implode('/', [$this->baseComponentName, implode('/', $breadcrumbs), 'src', '']);
-
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['services'][$namespace]['resource'] = '%kernel.project_dir%/'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/';
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['services'][$namespace]['resource'] = '%kernel.project_dir%/'.implode('/', $breadcrumbs).'/src/';
 
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Entity')) {
                             $this->tasks[self::TASK_EXPAND_SERVICES]['doctrine']['orm']['mappings'][$item->getFilename()] = [
                                 'type' => 'attribute',
                                 'is_bundle' => false,
-                                'dir' => '%kernel.project_dir%/'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/Entity',
+                                'dir' => '%kernel.project_dir%/'.implode('/', $breadcrumbs).'/src/Entity',
                                 'prefix' => $namespace.'Entity',
                                 'alias' => $item->getFilename(),
                             ];
@@ -158,7 +160,7 @@ class CompileCommand extends Command
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Controller')) {
                             $this->tasks[self::TASK_EXPAND_ROUTES][$item->getFilename()] = [
                                 'resource' => [
-                                    'path' => '../../'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/Controller/',
+                                    'path' => '../../'.implode('/', $breadcrumbs).'/src/Controller/',
                                     'namespace' => $namespace.'Controller'
                                 ],
                                 'type' => 'attribute'
@@ -167,11 +169,11 @@ class CompileCommand extends Command
                     }
 
                     if ($symfonyDir == 'templates') {
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['twig']['paths'][implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', $this->baseComponentName], $breadcrumbs, ['templates']))] = implode('-', $breadcrumbs);
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['twig']['paths'][implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%'], $breadcrumbs, ['templates']))] = implode('-', $breadcrumbs);
                     }
 
                     if ($symfonyDir == 'translations') {
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['framework']['translator']['paths'][] = implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', $this->baseComponentName], $breadcrumbs, ['translations']));
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['framework']['translator']['paths'][] = implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%'], $breadcrumbs, ['translations']));
                     }
                 }
             }
