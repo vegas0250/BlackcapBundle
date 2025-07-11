@@ -1,12 +1,12 @@
 {
   "name": "vegas0250/blackcap-bundle",
-  "description": "Symfony bundle by Vegas0250 (BlackcapBundle)",
+  "description": "Tree-like modular architecture in the style of a bundle approach",
   "license": "MIT",
   "type": "symfony-bundle",
   "autoload": {
     "psr-4": { "Vegas0250\\BlackcapBundle\\": "src/" }
   },
   "require": {
-    "php": ">=8.1"
+    "php": ">=7.4"
   }
 }

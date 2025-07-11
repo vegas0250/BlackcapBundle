@@ -4,9 +4,9 @@ namespace Vegas0250\BlackcapBundle\Command;
 
 use App\Kernel;
 use FilesystemIterator;
-use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -14,17 +14,8 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\String\UnicodeString;
 use Symfony\Component\Yaml\Yaml;
 
-#[AsCommand(name: 'blackcap:compile')]
 class CompileCommand extends Command
 {
-    const LIST_RESERVED_DIRS = [
-        'components',
-        'modules',
-        'elements',
-        'pieces',
-        'segments',
-    ];
-
     const LIST_SYMFONY_DIRS = [
         'assets',
         'config',
@@ -34,8 +25,6 @@ class CompileCommand extends Command
         'translations',
         'tests',
     ];
-
-    const PHOTON_ROOT_DIR = 'components';
 
     const TASK_COPY_PUBLIC_DIRS = 'copy-public-dirs';
     const TASK_EXPAND_PSR4 = 'expand-psr-4';
@@ -58,11 +47,21 @@ class CompileCommand extends Command
         self::TASK_EXPAND_ROUTES => [],
     ];
 
+    private $baseComponentName = 'app';
+
     public function __construct(
         private readonly Kernel     $kernel,
         private readonly Filesystem $filesystem
     ){
         parent::__construct();
+    }
+
+    protected function configure(): void
+    {
+        $this
+            ->setName('blackcap:compile')
+            ->addArgument('base-dir-name', InputArgument::OPTIONAL, 'Base component directory name', 'app')
+        ;
     }
 
     # dir = это название директории
@@ -112,7 +111,7 @@ class CompileCommand extends Command
 
                     if ($symfonyDir == 'public') {
                         $this->tasks[self::TASK_COPY_PUBLIC_DIRS][$item->getPathname().DIRECTORY_SEPARATOR.$symfonyDir] = implode(DIRECTORY_SEPARATOR, array_merge(
-                            [$this->kernel->getProjectDir(), 'public', self::PHOTON_ROOT_DIR,],
+                            [$this->kernel->getProjectDir(), 'public', $this->baseComponentName,],
                             $breadcrumbs
                         ));
                     }
@@ -140,15 +139,15 @@ class CompileCommand extends Command
 
                         #dump($namespace);
 
-                        $this->tasks[self::TASK_EXPAND_PSR4][$namespace] = implode('/', [self::PHOTON_ROOT_DIR, implode('/', $breadcrumbs), 'src', '']);
+                        $this->tasks[self::TASK_EXPAND_PSR4][$namespace] = implode('/', [$this->baseComponentName, implode('/', $breadcrumbs), 'src', '']);
 
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['services'][$namespace]['resource'] = '%kernel.project_dir%/'.self::PHOTON_ROOT_DIR.'/'.implode('/', $breadcrumbs).'/src/';
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['services'][$namespace]['resource'] = '%kernel.project_dir%/'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/';
 
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Entity')) {
                             $this->tasks[self::TASK_EXPAND_SERVICES]['doctrine']['orm']['mappings'][$item->getFilename()] = [
                                 'type' => 'attribute',
                                 'is_bundle' => false,
-                                'dir' => '%kernel.project_dir%/'.self::PHOTON_ROOT_DIR.'/'.implode('/', $breadcrumbs).'/src/Entity',
+                                'dir' => '%kernel.project_dir%/'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/Entity',
                                 'prefix' => $namespace.'Entity',
                                 'alias' => $item->getFilename(),
                             ];
@@ -157,7 +156,7 @@ class CompileCommand extends Command
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Controller')) {
                             $this->tasks[self::TASK_EXPAND_ROUTES][$item->getFilename()] = [
                                 'resource' => [
-                                    'path' => '../../'.self::PHOTON_ROOT_DIR.'/'.implode('/', $breadcrumbs).'/src/Controller/',
+                                    'path' => '../../'.$this->baseComponentName.'/'.implode('/', $breadcrumbs).'/src/Controller/',
                                     'namespace' => $namespace.'Controller'
                                 ],
                                 'type' => 'attribute'
@@ -166,11 +165,11 @@ class CompileCommand extends Command
                     }
 
                     if ($symfonyDir == 'templates') {
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['twig']['paths'][implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', self::PHOTON_ROOT_DIR], $breadcrumbs, ['templates']))] = implode('-', $breadcrumbs);
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['twig']['paths'][implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', $this->baseComponentName], $breadcrumbs, ['templates']))] = implode('-', $breadcrumbs);
                     }
 
                     if ($symfonyDir == 'translations') {
-                        $this->tasks[self::TASK_EXPAND_SERVICES]['framework']['translator']['paths'][] = implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', self::PHOTON_ROOT_DIR], $breadcrumbs, ['translations']));
+                        $this->tasks[self::TASK_EXPAND_SERVICES]['framework']['translator']['paths'][] = implode(DIRECTORY_SEPARATOR, array_merge(['%kernel.project_dir%', $this->baseComponentName], $breadcrumbs, ['translations']));
                     }
                 }
             }
@@ -182,12 +181,14 @@ class CompileCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
+        $this->baseComponentName = $input->getArgument('base-dir-name');
+
         $projectConfigDir = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . 'config';
         $projectComposerFile = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . 'composer.json';
-        $projectPhotonServicesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'photon_services.yaml';
-        $projectPhotonRoutesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'photon_routes.yaml';
+        $projectPhotonServicesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'blackcap_services.yaml';
+        $projectPhotonRoutesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'blackcap_routes.yaml';
 
-        $this->scan($this->kernel->getProjectDir().DIRECTORY_SEPARATOR.self::PHOTON_ROOT_DIR);
+        $this->scan($this->kernel->getProjectDir().DIRECTORY_SEPARATOR.$this->baseComponentName);
 
         $table = new Table($output->section());
         $table
