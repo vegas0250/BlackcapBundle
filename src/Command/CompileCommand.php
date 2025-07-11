@@ -105,12 +105,6 @@ class CompileCommand extends Command
         foreach($combined as $item) {
             $breadcrumbs = explode(DIRECTORY_SEPARATOR, str_replace($this->kernel->getProjectDir().DIRECTORY_SEPARATOR, '', $item->getPathname()));
 
-            dump([
-                $this->kernel->getProjectDir().DIRECTORY_SEPARATOR,
-                $item->getPathname(),
-                $breadcrumbs
-            ]);
-
             $symfonyDirs = array_intersect(scandir($item->getPathname()), self::LIST_SYMFONY_DIRS);
 
             if (count($symfonyDirs)) {
