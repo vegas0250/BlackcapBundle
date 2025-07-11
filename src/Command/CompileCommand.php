@@ -48,11 +48,13 @@ class CompileCommand extends Command
     ];
 
     private $baseComponentName = 'app';
+    private $kernel;
+    private $filesystem;
 
-    public function __construct(
-        private readonly Kernel     $kernel,
-        private readonly Filesystem $filesystem
-    ){
+    public function __construct(Kernel $kernel, Filesystem $filesystem)
+    {
+        $this->kernel = $kernel;
+        $this->filesystem = $filesystem;
         parent::__construct();
     }
 
