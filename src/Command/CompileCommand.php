@@ -153,10 +153,7 @@ class CompileCommand extends Command
 
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Controller')) {
                             $this->tasks[self::TASK_EXPAND_ROUTES][$item->getFilename()] = [
-                                'resource' => [
-                                    'path' => '../../'.implode('/', $breadcrumbs).'/src/Controller/',
-                                    'namespace' => $namespace.'Controller'
-                                ],
+                                'resource' => '../../'.implode('/', $breadcrumbs).'/src/Controller/',
                                 'type' => $this->getSupportedType()
                             ];
                         }
