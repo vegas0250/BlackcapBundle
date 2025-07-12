@@ -121,7 +121,7 @@ class CompileCommand extends Command
 
                     if ($symfonyDir == 'public') {
                         $this->tasks[self::TASK_COPY_PUBLIC_DIRS][$item->getPathname().DIRECTORY_SEPARATOR.$symfonyDir] = implode(DIRECTORY_SEPARATOR, array_merge(
-                            [$this->kernel->getProjectDir(), 'public', $this->baseComponentName,],
+                            [$this->kernel->getProjectDir(), 'public',],
                             $breadcrumbs
                         ));
                     }
