@@ -143,7 +143,7 @@ class CompileCommand extends Command
 
                         if (is_dir($item->getPathname() . DIRECTORY_SEPARATOR . $symfonyDir . DIRECTORY_SEPARATOR . 'Entity')) {
                             $this->tasks[self::TASK_EXPAND_SERVICES]['doctrine']['orm']['mappings'][$item->getFilename()] = [
-                                'type' => 'attribute',
+                                'type' => $this->getSupportedType(),
                                 'is_bundle' => false,
                                 'dir' => '%kernel.project_dir%/'.implode('/', $breadcrumbs).'/src/Entity',
                                 'prefix' => $namespace.'Entity',
@@ -174,6 +174,9 @@ class CompileCommand extends Command
         }
     }
 
+    private function getSupportedType() : string {
+        return (version_compare(Kernel::VERSION, '5.2.0', '>=')) ? 'attribute' : 'annotation';
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -183,8 +186,8 @@ class CompileCommand extends Command
 
         $projectConfigDir = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . 'config';
         $projectComposerFile = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . 'composer.json';
-        $projectPhotonServicesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'blackcap_services.yaml';
-        $projectPhotonRoutesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'blackcap_routes.yaml';
+        $projectBlackcapServicesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR . 'blackcap_services.yaml';
+        $projectBlackcapRoutesFile = $projectConfigDir . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'blackcap_routes.yaml';
 
         $this->scan($this->kernel->getProjectDir().DIRECTORY_SEPARATOR.$this->baseComponentName);
 
@@ -224,7 +227,7 @@ class CompileCommand extends Command
         if (count($this->tasks[self::TASK_EXPAND_ROUTES])) {
             $startTime = microtime(true);
 
-            file_put_contents($projectPhotonRoutesFile, Yaml::dump($this->tasks[self::TASK_EXPAND_ROUTES]));
+            file_put_contents($projectBlackcapRoutesFile, Yaml::dump($this->tasks[self::TASK_EXPAND_ROUTES]));
 
             $table->addRow([
                 self::TASK_EXPAND_ROUTES,
@@ -235,7 +238,7 @@ class CompileCommand extends Command
         if (count($this->tasks[self::TASK_EXPAND_SERVICES])) {
             $startTime = microtime(true);
 
-            file_put_contents($projectPhotonServicesFile, Yaml::dump($this->tasks[self::TASK_EXPAND_SERVICES]));
+            file_put_contents($projectBlackcapServicesFile, Yaml::dump($this->tasks[self::TASK_EXPAND_SERVICES]));
 
             $table->addRow([
                 self::TASK_EXPAND_SERVICES,
