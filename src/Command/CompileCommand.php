@@ -157,7 +157,7 @@ class CompileCommand extends Command
                                     'path' => '../../'.implode('/', $breadcrumbs).'/src/Controller/',
                                     'namespace' => $namespace.'Controller'
                                 ],
-                                'type' => 'attribute'
+                                'type' => $this->getSupportedType()
                             ];
                         }
                     }
