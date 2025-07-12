@@ -175,7 +175,7 @@ class CompileCommand extends Command
     }
 
     private function getSupportedType() : string {
-        return (version_compare(Kernel::VERSION, '5.2.0', '>=')) ? 'attribute' : 'annotation';
+        return (version_compare(Kernel::VERSION, '5.2.0', '>=') && PHP_VERSION_ID >= 80000) ? 'attribute' : 'annotation';
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
